@@ -6,6 +6,7 @@ API SDK for Chapa Payment Gateway
 # pylint: disable=too-many-arguments
 import re
 import json
+from typing import Any
 import requests
 
 
@@ -21,12 +22,14 @@ class Chapa:
     Simple SDK for Chapa Payment gateway
     """
 
-    def __init__(self, secret, base_ur='https://api.chapa.co', api_version='v1',
-                 response_format='json'):
+    allowed_methods = ['post', 'put']
+
+    def __init__(self, secret: str, base_ur: str ='https://api.chapa.co', api_version: str ='v1',
+                 response_format: str ='json'):
         self._key = secret
         self.base_url = base_ur
         self.api_version = api_version
-        if response_format and response_format in ['json', 'obj']:
+        if response_format in ['json', 'obj']:
             self.response_format = response_format
         else:
             raise ValueError('response_format must be \'json\' or \'obj\'')
@@ -35,7 +38,7 @@ class Chapa:
             'Authorization': f'Bearer {self._key}'
         }
 
-    def send_request(self, url, method, data=None, params=None, headers=None):
+    def send_request(self, url: str, method: str, data: dict = None, params: dict = None, headers: dict = None) -> Any:
         """
         Request sender to the api
 
@@ -47,21 +50,23 @@ class Chapa:
         Returns:
             response: response of the server.
         """
-        if params and not isinstance(params, dict):
+        if method not in self.allowed_methods:
+            raise ValueError(f'Please provide a valid method, allowed methods are: {self.allowed_methods}')
+
+        if params != None and not isinstance(params, dict):
             raise ValueError("params must be a dict")
 
-        if data and not isinstance(data, dict):
+        if data != None and not isinstance(data, dict):
             raise ValueError("data must be a dict")
 
-        if headers and isinstance(data, dict):
-            headers.update(self.headers)
-        elif headers and not isinstance(data, dict):
+        if headers != None and not isinstance(data, dict):
             raise ValueError("headers must be a dict")
-        else:
-            headers = self.headers
+        
+        self.headers.update(headers)
 
         func = getattr(requests, method)
-        response = func(url, data=data, headers=headers)
+        response = func(url, data=data, headers=self.headers)
+
         return getattr(response, "json", lambda: response.text)()
 
     def convert_response(self, response):
